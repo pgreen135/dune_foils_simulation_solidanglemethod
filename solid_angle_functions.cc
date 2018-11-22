@@ -6,11 +6,21 @@
 #include <cmath>
 
 #include "TRandom.h"
+#include "TSystem.h"
+#include "TMath.h"
+#include "Math/SpecFuncMathMore.h"
 
 using namespace std;
 
 // constructor
 solid_angle::solid_angle(const int optical_detector, const int scattering, const string flagDet): optical_detector_type{optical_detector}, flagRS{scattering}, flagDetector{flagDet} {
+
+  // load mathmore library
+  gSystem->Load("libMathMore.so");
+  if(gSystem->Load("libMathMore.so") < 0) {
+      throw(std::runtime_error("Unable to load MathMore library"));
+    }
+  _mathmore_loaded_ = true;
 
   // initialise gaisser hillas functions for VUV Rayleigh scattering correction
   std::cout<<"Loading the parameters for the geometry corrections depending on the detector and raileigh Scattering length ..."<<std::endl;
@@ -97,7 +107,6 @@ solid_angle::solid_angle(const int optical_detector, const int scattering, const
       GH[bin]->SetParameters(pars_ini);
     }
   }
-
 }
 
 
@@ -105,28 +114,46 @@ solid_angle::solid_angle(const int optical_detector, const int scattering, const
 int solid_angle::VUVHits(int Nphotons_created, TVector3 ScintPoint, TVector3 OpDetPoint) {
   gRandom->SetSeed(0);
 
-  // set Arapuca geometry struct for solid angle function
-  acc detPoint; 
-  detPoint.ax = OpDetPoint[0]; detPoint.ay = OpDetPoint[1]; detPoint.az = OpDetPoint[2];  // centre coordinates of optical detector
-  detPoint.w = width; detPoint.h = height; // width and height in cm of arapuca active window
-
   // distance and angle between ScintPoint and OpDetPoint
   double distance = sqrt(pow(ScintPoint[0] - OpDetPoint[0],2) + pow(ScintPoint[1] - OpDetPoint[1],2) + pow(ScintPoint[2] - OpDetPoint[2],2));
   double cosine = sqrt(pow(ScintPoint[0] - OpDetPoint[0],2)) / distance;
   double theta = acos(cosine)*180./pi;
 
-  // get scintillation point coordinates relative to arapuca window centre
-  TVector3 ScintPoint_rel = ScintPoint - OpDetPoint;  
+  // calculate solid angle:
+  double solid_angle;
+  // Arapucas
+  if (optical_detector_type == 0) {
+    // set Arapuca geometry struct for solid angle function
+    acc detPoint; 
+    detPoint.ax = OpDetPoint[0]; detPoint.ay = OpDetPoint[1]; detPoint.az = OpDetPoint[2];  // centre coordinates of optical detector
+    detPoint.w = width; detPoint.h = height; // width and height in cm of arapuca active window
 
-  // calculate solid angle
-  double solid_angle = solid_angle::solid(detPoint, ScintPoint_rel);
+    // get scintillation point coordinates relative to arapuca window centre
+    TVector3 ScintPoint_rel = ScintPoint - OpDetPoint;  
+
+    // calculate solid angle
+    solid_angle = solid_angle::solid(detPoint, ScintPoint_rel);
+  }
+  // PMTs
+  else if (optical_detector_type == 1) {
+    // offset in z-y plane
+    double d = sqrt(pow(ScintPoint[1] - OpDetPoint[1],2) + pow(ScintPoint[2] - OpDetPoint[2],2));
+    // drift distance (in x)
+    double h =  sqrt(pow(ScintPoint[0] - OpDetPoint[0],2));
+    // Solid angle of a disk
+    solid_angle = Disk_SolidAngle(d, h, radius);
+  }
+  else {
+    std::cout << "Error: Invalid optical detector type." << endl;
+    exit(1);
+  }  
 
   // calculate number of photons hits by geometric acceptance: accounting for solid angle and LAr absorbtion length
   double hits_geo = exp(-1.*distance/L_abs) * (solid_angle / (4*pi)) * Nphotons_created;
 
   // apply Gaisser-Hillas correction for Rayleigh scattering distance and angular dependence
   // offset angle bin
-  int j = std::round(theta/delta_angulo);
+  int j = (theta/delta_angulo);
   double hits_rec = gRandom->Poisson( GH[j]->Eval(distance)*hits_geo/cosine );
 
   // round to integer value, cannot have non-integer number of hits
@@ -163,7 +190,7 @@ int solid_angle::VisHits(int Nphotons_created, TVector3 ScintPoint, TVector3 OpD
 
   // apply Gaisser-Hillas correction for Rayleigh scattering distance and angular dependence
   // offset angle bin
-  int j = std::round(theta_cathode/delta_angulo);
+  int j = (theta_cathode/delta_angulo);
   double cathode_hits_rec = GH[j]->Eval(distance_cathode)*cathode_hits_geo/cosine_cathode;
   //double cathode_hits_rec = gRandom->Poisson( GH[j]->Eval(distance)*cathode_hits_geo/cosine_cathode );      // SWAP TO THIS ?
 
@@ -285,4 +312,51 @@ double solid_angle::solid(solid_angle::acc& out, TVector3 v){
   // error message if none of these cases, i.e. something has gone wrong!
   std::cout << "Warning: invalid solid angle call." << std::endl;
   return 0.0;
+}
+
+// solid angle of circular aperture
+double solid_angle::Disk_SolidAngle(double* x, double *p) {
+  const double d = x[0];
+  const double h = x[1];
+  const double b = p[0];
+  if(b <= 0. || d < 0. || h <= 0.) return 0.; 
+  const double aa = TMath::Sqrt(h*h/(h*h+(b+d)*(b+d)));
+  if(d == 0) {
+    return 2.*TMath::Pi()*(1.-aa);
+  }
+  const double bb = TMath::Sqrt(4*b*d/(h*h+(b+d)*(b+d)));
+  const double cc = 4*b*d/((b+d)*(b+d));
+
+  if(!_mathmore_loaded_) {
+    if(gSystem->Load("libMathMore.so") < 0) {
+      throw(std::runtime_error("Unable to load MathMore library"));
+    }
+    _mathmore_loaded_ = true;
+  }
+  if(TMath::Abs(ROOT::Math::comp_ellint_1(bb) - bb) < 1e-10 && TMath::Abs(ROOT::Math::comp_ellint_3(cc,bb) - cc) <1e-10) {
+    throw(std::runtime_error("please do gSystem->Load(\"libMathMore.so\") before running Disk_SolidAngle for the first time!"));
+  }
+  if(d < b) {
+    return 2.*TMath::Pi() - 2.*aa*(ROOT::Math::comp_ellint_1(bb) + TMath::Sqrt(1.-cc)*ROOT::Math::comp_ellint_3(cc,bb));
+  }
+  if(d == b) {
+    return TMath::Pi() - 2.*aa*ROOT::Math::comp_ellint_1(bb);
+  }
+  if(d > b) {
+    return 2.*aa*(TMath::Sqrt(1.-cc)*ROOT::Math::comp_ellint_3(cc,bb) - ROOT::Math::comp_ellint_1(bb));
+  }
+
+  return 0.;
+}
+
+double solid_angle::Disk_SolidAngle(double d, double h, double b) {
+  double x[2] = { d, h };
+  double p[1] = { b };
+  if(!_mathmore_loaded_) {
+    if(gSystem->Load("libMathMore.so") < 0) {
+      throw(std::runtime_error("Unable to load MathMore library"));
+    }
+    _mathmore_loaded_ = true;
+  }
+  return Disk_SolidAngle(x,p);
 }

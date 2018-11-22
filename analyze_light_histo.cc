@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <chrono>
 
+#include "TSystem.h"
+
 #include "analyze_light_histo.h"
 #include "utility_functions.h"
 #include "solid_angle_functions.h"

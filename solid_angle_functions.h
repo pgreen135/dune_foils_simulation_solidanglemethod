@@ -30,13 +30,16 @@ private:
 	double height = 10.16;	// cm
 	double width = 10.16;	// cm
 	// PMTs: decector_type = 1; 
-	double raidus = 8*2.54/2.;	//	8" PMT diameter  // cm	// not in use
+	//double radius = 8*2.54/2.;	//	8" PMT diameter  // cm	// not in use
+	double radius = 10.16/2;		// approx arapuca size if circle
 
 	// structure definition for solid angle of rectangle function
 	struct acc{
 		// ax,ay,az = centre of rectangle; w = width; h = height
   		double ax, ay, az, w, h; 
 	};
+
+	bool _mathmore_loaded_ = false;
 
 
 	// *************************************************************************************************
@@ -114,7 +117,7 @@ private:
 	
 public:	
 	// constructor 
-	solid_angle(const int detector_type, const int flagRS, const std::string flagDetector);
+	solid_angle(const int optical_detector_type, const int flagRS, const std::string flagDetector);
 
 	// destructor
 	~solid_angle(){};
@@ -130,7 +133,9 @@ public:
 	double omega(double a, double b, double d);
 	double solid(acc& out, TVector3 v);
 
-	// solid angle of spherical aperture calculation functions		TO DO
+	// solid angle of circular aperture calculation functions
+	double Disk_SolidAngle(double *x, double *p);
+	double Disk_SolidAngle(double d, double h, double b);
 
 };
 
