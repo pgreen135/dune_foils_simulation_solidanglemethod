@@ -182,6 +182,9 @@ int main() {
     // initalise timings class
     timeparam Timing(step_size);
 
+    // iniitlise solid anle class
+    solid_angle Solid(optical_detector_type, flagRS, flagDetector);
+
 
     //////////////////////////////////////////////////////////////////////////////
     ////////////-------------------MAIN CODE---------------------------///////////
@@ -311,12 +314,14 @@ int main() {
             TVector3 ScintPoint(position_list[events][0],position_list[events][1],position_list[events][2]);
             TVector3 OpDetPoint(myfile_data.at(num_pmt).at(1),myfile_data.at(num_pmt).at(2),myfile_data.at(num_pmt).at(3));
 
-            // determine number of pmt hits via solid angle 
-            // output form: num vuv photons, num vis photons
-            vector<double> pmt_hits = solid_angle::SolidAngleAnalyzer(Nphotons_created, quantum_efficiency, catcov, vuvfrac, visfrac, num_pmt, ScintPoint, OpDetPoint);
+            // determine number of hits on optical channel via solid angle 
+            // VUV
+            int num_VUV = Solid.VUVHits(Nphotons_created, OpDetPoint, ScintPoint);              
+            // Visible
+            int num_VIS = Solid.VisHits(Nphotons_created, OpDetPoint, ScintPoint);
 
-            int num_VUV = pmt_hits.at(0);
-            int num_VIS = pmt_hits.at(1);
+            // determine number of these hits that are detected         // TO DO
+
 
             // if no photons from this event for this PMT, go to the next event.
             if(num_VUV+num_VIS == 0) {continue; } // forces the next iteration

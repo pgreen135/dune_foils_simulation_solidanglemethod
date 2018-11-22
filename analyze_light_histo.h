@@ -39,7 +39,7 @@ bool sort_function(std::pair<double, int> pair1, std::pair<double, int> pair2)
 ///-------------------------------------
 //--------WHAT to generate?-------------
 ///-------------------------------------
-bool fixed_energy = true; double fixedE = 20.0; //MeV
+bool fixed_energy = true; double fixedE = 4.17; //MeV
 bool supernova = false;
 bool gen_argon = false;
 bool gen_radon = false;
@@ -74,11 +74,26 @@ double time_cut = 0.1; 	// in microseconds - 0.1 mu_s = 100 ns
 //------Light System Configuration------
 ///-------------------------------------
 //--------------------------------------
-///Config List:
+// Detector
+// "SBN" = SBN-like (size) detectors: SBND, MicroBooNE, ICARUS	[not implemented yet]
+// "SP" = DUNE single phase like detector
+// "DP" = DUNE dual phase like detector 						[not implemented yet]
+const string flagDetector = "SP";
+
+/// Foil configuration:
 ///0 = Full Foils
 ///1 = Cath Foils
 ///2 = VUV only
 const int config = 1; // cathode foils only configuration for dune
+// Optical detector type:
+// 0 = Arapucas
+// 1 = PMTs [not implemented yet]
+const int optical_detector_type = 0; 
+// VUV rayleigh scattering length:
+// 1 = 60cm
+// 2 = 120cm
+// 3 = 180cm
+const int flagRS = 1;
 //--------------------------------------
 //--------------------------------------
 
@@ -92,7 +107,7 @@ bool reflT;
 //--------------------------------------
 //TTree branches and data products:
 //-------------------------------------
-TFile event_file("event_file_testing.root", "RECREATE", "Event File");
+TFile event_file("event_file_100cm.root", "RECREATE", "Event File");
 
 TTree *data_tree = new TTree("data_tree", "data tree");
 TTree *data_tree_vuv = new TTree("data_tree_vuv", "data tree_vuv");
