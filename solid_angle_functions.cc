@@ -8,6 +8,7 @@
 #include "TRandom.h"
 #include "TSystem.h"
 #include "TMath.h"
+#include "TFormula.h"
 #include "Math/SpecFuncMathMore.h"
 
 using namespace std;
@@ -58,9 +59,10 @@ solid_angle::solid_angle(const int optical_detector, const int scattering, const
     std::cout<<"Light simulation for DUNE Single Phase detector"<<std::endl;
     for(int bin = 0; bin < 9; bin++) {
       GH[bin] =  new TF1("GH",GaisserHillas,0.,2000,4);      
+      // uses the values for Arapucas, as these replace pmt values in solid_angle_functions.h; would want to add switch between PMT or Arapuca configs
       if(flagRS == 1) {
         for(int j=0; j < 4; j++) {
-          pars_ini[j] = GH_RS60cm_SP[j][bin];
+          pars_ini[j] = GH_RS60cm_SP[j][bin];		
         }
       }
       else if(flagRS == 2) {
@@ -107,6 +109,19 @@ solid_angle::solid_angle(const int optical_detector, const int scattering, const
       GH[bin]->SetParameters(pars_ini);
     }
   }
+
+
+  // initialise pol5 functions for visible hits correction -- arapucas, RS60cm only [preliminary]
+  double pars_ini_vis[6] = {0,0,0,0,0,0};
+  for (int bin = 0; bin < 9; bin++) {
+    VIS_pol[bin] = new TF1 ("pol", "pol5", 0, 2000);
+    for (int j = 0; j < 6; j++){
+      pars_ini_vis[j] = VIS_RS60cm_SP[j][bin];
+    }
+    VIS_pol[bin]->SetParameters(pars_ini_vis);
+  }
+
+
 }
 
 
@@ -177,22 +192,23 @@ int solid_angle::VisHits(int Nphotons_created, TVector3 ScintPoint, TVector3 OpD
   TVector3 cathodeCentrePoint(x_foils,y_foils,z_foils);
   TVector3 ScintPoint_relative = ScintPoint - cathodeCentrePoint; 
 
-  // calculate distance and angle between ScintPoint and cathode centre point
-  double distance_cathode = sqrt(pow(ScintPoint[0] - cathodeCentrePoint[0],2) + pow(ScintPoint[1] - cathodeCentrePoint[1],2) + pow(ScintPoint[2] - cathodeCentrePoint[2],2));
-  double cosine_cathode = sqrt(pow(ScintPoint[0] - cathodeCentrePoint[0],2)) / distance_cathode;
-  double theta_cathode = acos(cosine_cathode)*180./pi;
-
   // calculate solid angle
   double solid_angle_cathode = solid_angle::solid(cathode_plane, ScintPoint_relative);
 
+  // calculate distance and angle between ScintPoint and hotspot
+  // vast majority of hits in hotspot region directly infront of scintpoint,therefore consider attenuation for this distance and on axis GH instead of for the centre coordinate
+  double distance_cathode = plane_depth - ScintPoint[0];
+  double cosine_cathode = 1;
+  double theta_cathode = 0;
+
   // calculate hits on cathode plane via geometric acceptance
-  double cathode_hits_geo = exp(-1.*distance_cathode/L_abs) * (solid_angle_cathode / (4*pi)) * Nphotons_created;
+  double cathode_hits_geo = exp(-1.*distance_cathode/L_abs) * (solid_angle_cathode / (4.*pi)) * Nphotons_created;
 
   // apply Gaisser-Hillas correction for Rayleigh scattering distance and angular dependence
   // offset angle bin
   int j = (theta_cathode/delta_angulo);
   double cathode_hits_rec = GH[j]->Eval(distance_cathode)*cathode_hits_geo/cosine_cathode;
-  //double cathode_hits_rec = gRandom->Poisson( GH[j]->Eval(distance)*cathode_hits_geo/cosine_cathode );      // SWAP TO THIS ?
+  //double cathode_hits_rec = gRandom->Poisson( GH[j]->Eval(distance)*cathode_hits_geo/cosine_cathode );      // Swap to this? 
 
 
   // 2). calculate number of these hits which reach the Arapuca via solid angle 
@@ -215,11 +231,21 @@ int solid_angle::VisHits(int Nphotons_created, TVector3 ScintPoint, TVector3 OpD
   // calculate number of hits via geometeric acceptance
   double hits_geo = (solid_angle_detector / (4*pi)) * cathode_hits_rec;
 
-  // apply some form of correction
+  // distance to hotspot
+  double distance_vuv = sqrt(pow(ScintPoint[0] - hotspot[0],2) + pow(ScintPoint[1] - hotspot[1],2) + pow(ScintPoint[2] - hotspot[2],2));
+  // distance from hotspot to arapuca
+  double distance_vis = sqrt(pow(hotspot[0] - OpDetPoint[0],2) + pow(hotspot[1] - OpDetPoint[1],2) + pow(hotspot[2] - OpDetPoint[2],2));
+  // angle between hotspot and arapuca
+  double cosine_vis = sqrt(pow(hotspot[0] - OpDetPoint[0],2)) / distance_vis;
+  double theta_vis = acos(cosine_vis)*180./pi;
+
+  // apply correction
+  int k = (theta_vis/delta_angle);
+  double hits_rec = gRandom->Poisson(VIS_pol[k]->Eval(distance_vuv)*hits_geo/cosine_vis);
 
   // round final result
-  int hits_vis = std::round(hits_geo);
-
+  int hits_vis = std::round(hits_rec);
+  
   return hits_vis;
 }
 
@@ -237,8 +263,8 @@ Double_t solid_angle::GaisserHillas(double *x,double *par) {
 }
 
 
-// solid angle of rectanglular aperture - arapuca - calculation functions
-// written by Franciole Marinho
+// solid angle of rectanglular aperture calculation functions
+
 double solid_angle::omega(double a, double b, double d){
 
   double aa = a/(2.0*d);
@@ -250,16 +276,9 @@ double solid_angle::omega(double a, double b, double d){
 
 double solid_angle::solid(solid_angle::acc& out, TVector3 v){
 
-  //This function gives the solid angle for a segment adapted to tallbo geometry
-
   //v is the position of the track segment with respect to 
   //the center position of the arapuca window 
-  //That is the: segment position wrt tallbo frame - center position of the 
-  //arapuca window wrt to tallbo frame
-
-  //out is only a struct that I use to pass info regarding the arapuca 
-  //dimensions and position
-
+ 
   // arapuca plane fixed in x direction	
 
   if( v.Y()==0.0 && v.Z()==0.0){
@@ -313,6 +332,7 @@ double solid_angle::solid(solid_angle::acc& out, TVector3 v){
   std::cout << "Warning: invalid solid angle call." << std::endl;
   return 0.0;
 }
+
 
 // solid angle of circular aperture
 double solid_angle::Disk_SolidAngle(double* x, double *p) {

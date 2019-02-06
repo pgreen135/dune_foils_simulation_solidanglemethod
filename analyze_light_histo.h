@@ -39,7 +39,7 @@ bool sort_function(std::pair<double, int> pair1, std::pair<double, int> pair2)
 ///-------------------------------------
 //--------WHAT to generate?-------------
 ///-------------------------------------
-bool fixed_energy = true; double fixedE = 4.17; //MeV
+bool fixed_energy = true; double fixedE = 20; //MeV
 bool supernova = false;
 bool gen_argon = false;
 bool gen_radon = false;
@@ -53,11 +53,11 @@ double step_size = 1.0; 	// step size for discretisation of timing array in cm
 //--------WHERE to generate?-------------
 ///-------------------------------------
 // Choose one only!
-bool random_pos = false;	// works
+bool random_pos = true;	// works
 double PosMin[3] = {10,-600,300}; 	//For random_pos option, generate in this range
 double PosMax[3] = {330,600,1000};
 bool fixed_xpos = false; 	// needs updating, range getting random position from is not valid for dune library
-bool fixed_pos = true;		// works
+bool fixed_pos = false;		// works
 double fixedX = 100; 		// cm 
 double fixedY = 31.1784; 	// cm 
 double fixedZ = 580.099; 	// cm
@@ -107,7 +107,7 @@ bool reflT;
 //--------------------------------------
 //TTree branches and data products:
 //-------------------------------------
-TFile event_file("event_file_100cm.root", "RECREATE", "Event File");
+TFile event_file("event_file_test.root", "RECREATE", "Event File");
 
 TTree *data_tree = new TTree("data_tree", "data tree");
 TTree *data_tree_vuv = new TTree("data_tree_vuv", "data tree_vuv");

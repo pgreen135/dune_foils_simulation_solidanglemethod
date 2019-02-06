@@ -26,12 +26,11 @@ private:
 	//                    	OPTICAL DETECTOR SHAPE/SIZE
 	// *************************************************************************************************	
 	const int optical_detector_type;
-	// Arapucas: detector_type = 0;	[matching size used in Diego's .gdml for "small_bars"]
-	double height = 10.16;	// cm
-	double width = 10.16;	// cm
+	// Arapucas: detector_type = 0;
+	double height = 9.3;	// cm
+	double width = 7.8;	// cm
 	// PMTs: decector_type = 1; 
-	//double radius = 8*2.54/2.;	//	8" PMT diameter  // cm	// not in use
-	double radius = 10.16/2;		// approx arapuca size if circle
+	double radius = 8*2.54/2.;	//	8" PMT diameter  // cm
 
 	// structure definition for solid angle of rectangle function
 	struct acc{
@@ -62,10 +61,23 @@ private:
 					      {118.062, 119.348, 111.604, 112.464, 121.064, 114.846, 120.385, 119.249, 106.702}, 
 					      {-200, -200, -200, -200, -200, -200, -200, -200, -200} };
 	//  DUNE-SP Gaisser-Hillas
+	// Arapuca parameters [front only] [preliminary]
+	const double GH_RS60cm_SP[4][9] = { {1.32447,1.28912,1.23944,1.17716,1.09635,0.97301,0.793501,0.639818,0.543092},
+										{109.833,114.854,132.236,135.188,135.101,154.642,155.632,162.43,100.01},
+										{30.8346,31.4721,27.5552,29.4935,33.4423,35.7115,49.885,57.4703,73.169},
+										{-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000,-1000,} 
+									};
+
+
+	// PMT parameters [Diego]
+	// uncomment to swap back to using PMT parameters; require implementation of Arapuca or PMT switch 
+	/*								
 	const double GH_RS60cm_SP[4][9] = { {1.37378, 1.3634, 1.31054, 1.23488, 1.14697, 1.01977, 0.886863, 0.751005, 0.592496}, 
 					     {113.764, 128.753, 122.512, 141.309, 140.16, 153.797, 170.915, 184.999, 199.248}, 
 					     {81.3747, 78.791, 87.2706, 81.9593, 92.3303, 102.592, 110.304, 112.577, 107.575}, 
 					     {-200, -200, -200, -200, -200, -200, -200, -200, -200} }; 
+	*/
+
 	const double GH_RS120cm_SP[4][9] = { {1.22881, 1.20776, 1.15355, 1.08087, 0.988751, 0.868487, 0.736578, 0.604445, 0.465248}, 
 					     {120.126, 137.211, 129.695, 150.215, 151.926, 168.741, 199.556, 223.586, 260.437}, 
 					     {120.445, 115.844, 127.995, 114.96, 130.093, 141.39, 147.55, 154.139, 136.948}, 
@@ -102,18 +114,34 @@ private:
 	const double n_LAr_VUV = 2.632;     // effective index due to group vel.
 	const double n_LAr_vis = 1.23;
 
-	// properties of detector
+	// Detector properties: 
+	
 	// plane depth
 	// Dune
 	const double plane_depth = 363.38405;	// cm
+	
 	// Cathode plane covered by foils
-	// Dune [ UPDATE ACTUAL VALUES ]
+	// Dune
 	// size
-	double height_foils = 1200;	// cm
-	double width_foils = 1400;	// cm
+	double height_foils = 1204.7255 + 5.466;	// cm	// 2 panels y height 602.36275 with 5.466cm gaps between
+	double width_foils = 1359.144 + 35.196;	// cm		// 6 panels of z width 226.524cm with 5.866cm gaps between them
+	
 	// centre coordinates
-	double x_foils = 363.38405; double y_foils = 0; double z_foils = 700;	// cm
+	// Dune
+	double x_foils = 363.38405; double y_foils = 0; double z_foils = 696.294;	// cm
 
+	// Visible hits correction [preliminary]
+	TF1* VIS_pol[9];
+	const double delta_angle = 10.;
+
+	// Arapuca parameters [Front only] [preliminary]
+	const double VIS_RS60cm_SP[6][9] = { {3.18904,3.02305,2.7737,2.34375,1.89815,1.33308,0.866634,0.866634,0.866634},
+								{-0.0328224,-0.0288003,-0.0257539,-0.0185298,-0.0143308,-0.008233,-0.00558584,-0.00558584,-0.00558584},
+								{0.000227445,0.00018397,0.00017563,0.000113382,0.000100411,5.15231e-05,4.12103e-05,4.12103e-05,4.12103e-05},
+								{-9.45563e-07,-7.09864e-07,-7.51285e-07,-4.41947e-07,-4.55353e-07,-2.17356e-07,-1.97314e-07,-1.97314e-07,-1.97314e-07},
+								{2.14532e-09,1.53794e-09,1.81412e-09,1.01618e-09,1.17146e-09,5.76984e-10,5.47374e-10,5.47374e-10,5.47374e-10},
+								{-2.01489e-12,-1.4229e-12,-1.83289e-12,-1.02002e-12,-1.24966e-12,-6.63549e-13,-6.12543e-13,-6.12543e-13,-6.12543e-13} 
+							};
 	
 public:	
 	// constructor 

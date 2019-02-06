@@ -316,14 +316,11 @@ int main() {
             TVector3 ScintPoint(position_list[events][0],position_list[events][1],position_list[events][2]);
             TVector3 OpDetPoint(myfile_data.at(num_pmt).at(1),myfile_data.at(num_pmt).at(2),myfile_data.at(num_pmt).at(3));
 
-            // determine number of hits on optical channel via solid angle 
+            // determine number of hits on optical channel via solid angle + corrections
             // VUV
             int num_VUV = Solid.VUVHits(Nphotons_created, OpDetPoint, ScintPoint);              
             // Visible
             int num_VIS = Solid.VisHits(Nphotons_created, OpDetPoint, ScintPoint);
-
-            // determine number of these hits that are detected         // TO DO
-
 
             // if no photons from this event for this PMT, go to the next event.
             if(num_VUV+num_VIS == 0) {continue; } // forces the next iteration

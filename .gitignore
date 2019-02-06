@@ -1,0 +1,9 @@
+*.pdf
+*.root
+*.dat
+*.txt
+*.o
+*.png
+*.pid
+
+!bars_positions_dune1x2x6.txt
