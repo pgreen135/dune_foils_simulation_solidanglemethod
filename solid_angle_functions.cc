@@ -229,7 +229,13 @@ int solid_angle::VisHits(int Nphotons_created, TVector3 ScintPoint, TVector3 OpD
   double solid_angle_detector = solid_angle::solid(detPoint, emission_relative);
 
   // calculate number of hits via geometeric acceptance
-  double hits_geo = (solid_angle_detector / (4*pi)) * cathode_hits_rec;
+  // ##################################################################
+  // NOTE: there was an error here in previous version (if you had already copied this code), was using 4pi instead of 2pi i.e. forgetting about the vm2000 foils (doh!)
+  // required corrections are now factor 2 less due to this!
+
+  double hits_geo = (solid_angle_detector / (2*pi)) * cathode_hits_rec;
+
+  // ##################################################################
 
   // distance to hotspot
   double distance_vuv = sqrt(pow(ScintPoint[0] - hotspot[0],2) + pow(ScintPoint[1] - hotspot[1],2) + pow(ScintPoint[2] - hotspot[2],2));
