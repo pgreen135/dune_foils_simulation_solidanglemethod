@@ -3,7 +3,9 @@
 
 // class containing functions for calculating number of hits on each optical channel via the solid angle method
 // calculates number of VUV hits, using gaisser-hillas corrections for Rayleigh scattering
-// calculated number of visible hits [preliminary]
+
+// calculates number of visible hits via calculating number of hits on the cathode corrected with gaisser-hillas curves then the number
+// of hits from the cathode for each optical channel using correction analogous to gaisser-hillas curves
 
 #include <vector>
 #include <string>

@@ -192,12 +192,12 @@ int solid_angle::VisHits(int Nphotons_created, TVector3 ScintPoint, TVector3 OpD
   TVector3 cathodeCentrePoint(x_foils,y_foils,z_foils);
   TVector3 ScintPoint_relative = ScintPoint - cathodeCentrePoint; 
 
-  // calculate solid angle
+  // calculate solid angle of cathode from the scintillation point
   double solid_angle_cathode = solid_angle::solid(cathode_plane, ScintPoint_relative);
 
   // calculate distance and angle between ScintPoint and hotspot
   // vast majority of hits in hotspot region directly infront of scintpoint,therefore consider attenuation for this distance and on axis GH instead of for the centre coordinate
-  double distance_cathode = plane_depth - ScintPoint[0];
+  double distance_cathode = std::abs(plane_depth - ScintPoint[0]);
   double cosine_cathode = 1;
   double theta_cathode = 0;
 
@@ -208,10 +208,10 @@ int solid_angle::VisHits(int Nphotons_created, TVector3 ScintPoint, TVector3 OpD
   // offset angle bin
   int j = (theta_cathode/delta_angulo);
   double cathode_hits_rec = GH[j]->Eval(distance_cathode)*cathode_hits_geo/cosine_cathode;
-  //double cathode_hits_rec = gRandom->Poisson( GH[j]->Eval(distance)*cathode_hits_geo/cosine_cathode );      // Swap to this? 
+  //double cathode_hits_rec = gRandom->Poisson( GH[j]->Eval(distance)*cathode_hits_geo/cosine_cathode );      // swap to this? 
 
 
-  // 2). calculate number of these hits which reach the Arapuca via solid angle 
+  // 2). calculate number of these hits which reach the Arapuca from the hotspot via solid angle 
 
   // set Arapuca geometry struct for solid angle function
   acc detPoint; 
@@ -225,7 +225,7 @@ int solid_angle::VisHits(int Nphotons_created, TVector3 ScintPoint, TVector3 OpD
   // get hotspot coordinates relative to detpoint
   TVector3 emission_relative = hotspot - OpDetPoint;
 
-  // calculate solid angle
+  // calculate solid angle of optical channel
   double solid_angle_detector = solid_angle::solid(detPoint, emission_relative);
 
   // calculate number of hits via geometeric acceptance
@@ -245,7 +245,7 @@ int solid_angle::VisHits(int Nphotons_created, TVector3 ScintPoint, TVector3 OpD
   double cosine_vis = sqrt(pow(hotspot[0] - OpDetPoint[0],2)) / distance_vis;
   double theta_vis = acos(cosine_vis)*180./pi;
 
-  // apply correction
+  // apply correction curves, 5th order polynomial 
   int k = (theta_vis/delta_angle);
   double hits_rec = gRandom->Poisson(VIS_pol[k]->Eval(distance_vuv)*hits_geo/cosine_vis);
 
